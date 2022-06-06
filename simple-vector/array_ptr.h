@@ -21,7 +21,18 @@ public:
 
     // Запрещаем копирование
     ArrayPtr(const ArrayPtr&) = delete;
-    ArrayPtr(ArrayPtr&&) = delete;
+
+    ArrayPtr(ArrayPtr&& other)
+            : raw_ptr_(other.raw_ptr_)
+    {
+        other.raw_ptr_ = nullptr;
+    }
+
+    ArrayPtr& operator=(ArrayPtr&& other) {
+        raw_ptr_ = other.raw_ptr_;
+        other.raw_ptr_ = nullptr;
+        return *this;
+    }
 
     ~ArrayPtr() {
         delete[] raw_ptr_;
