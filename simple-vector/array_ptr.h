@@ -29,8 +29,10 @@ public:
     }
 
     ArrayPtr& operator=(ArrayPtr&& other) {
+        Type* tmp = raw_ptr_;
         raw_ptr_ = other.raw_ptr_;
         other.raw_ptr_ = nullptr;
+        delete[] tmp;
         return *this;
     }
 
