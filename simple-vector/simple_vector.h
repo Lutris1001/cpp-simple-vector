@@ -34,30 +34,32 @@ public:
     SimpleVector() noexcept = default;
 
     // Создаёт вектор из size элементов, инициализированных значением по умолчанию
-    explicit SimpleVector(size_t size) {
-        data_ = ArrayPtr<Type>(size);
+    explicit SimpleVector(size_t size)
+            : data_(size)
+    {
         size_ = size;
         capacity_ = size;
     }
 
-    explicit SimpleVector(ReserveProxyObj res) {
-        data_ = ArrayPtr<Type>(res.capacity_to_reserve);
+    explicit SimpleVector(ReserveProxyObj res)
+            : data_(res.capacity_to_reserve)
+    {
         capacity_ = res.capacity_to_reserve;
     }
 
     // Создаёт вектор из size элементов, инициализированных значением value
-    SimpleVector(size_t size, const Type& value) {
-
-        data_ = ArrayPtr<Type>(size);
+    SimpleVector(size_t size, const Type& value)
+            : data_(size)
+    {
         size_ = size;
         capacity_ = size;
         std::fill(begin(), end(), value);
     }
 
     // Создаёт вектор из std::initializer_list
-    SimpleVector(std::initializer_list<Type> init) {
-
-        data_ = ArrayPtr<Type>(init.size());
+    SimpleVector(std::initializer_list<Type> init)
+            : data_(init.size())
+    {
         std::copy(init.begin(), init.end(), data_.Get());
         size_ = init.size();
         capacity_ = init.size();
@@ -80,17 +82,13 @@ public:
 
     // Возвращает ссылку на элемент с индексом index
     Type& operator[](size_t index) noexcept {
-        if (index >= size_) {
-            throw std::out_of_range("Index out of range.");
-        }
+        assert(index <= size_);
         return data_[index];
     }
 
     // Возвращает константную ссылку на элемент с индексом index
     const Type& operator[](size_t index) const noexcept {
-        if (index >= size_) {
-            throw std::out_of_range("Index out of range.");
-        }
+        assert(index < size_);
         return data_[index];
     }
 
@@ -174,9 +172,10 @@ public:
         return const_cast<Type*>(data_.Get() + size_);
     }
 
-    SimpleVector(const SimpleVector& other) {
+    SimpleVector(const SimpleVector& other)
+            : data_(other.size_)
+    {
         if (!other.IsEmpty()) {
-            data_ = ArrayPtr<Type>(other.size_);
             std::copy(other.begin(), other.end(), data_.Get());
             size_ = other.size_;
             capacity_ = other.size_;
@@ -197,7 +196,6 @@ public:
             size_ = other.size_;
             capacity_ = other.size_;
 
-            other.data_ = ArrayPtr<Type>{};
             other.size_ = 0;
             other.capacity_ = 0;
         }
@@ -208,7 +206,7 @@ public:
             data_ = std::move(rhs.data_);
             size_ = rhs.size_;
             capacity_ = rhs.capacity_;
-            rhs.data_ = ArrayPtr<Type>{};
+
             rhs.size_ = 0;
             capacity_ = 0;
         }
@@ -254,10 +252,10 @@ public:
     // Если перед вставкой значения вектор был заполнен полностью,
     // вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
     Iterator Insert(ConstIterator pos, const Type& value) {
-        assert(pos < cend() && pos >= cbegin());
+        assert(pos - cbegin() <= cend() - cbegin() && pos - cbegin() >= 0);
         if (size_ < capacity_) {
             Iterator npos = Iterator(pos);
-            std::copy_backward(pos, cend(), end() + 1);
+            std::move_backward(pos, cend(), end() + 1);
             *npos = value;
             ++size_;
             return npos;
@@ -297,7 +295,7 @@ public:
 
     // Rvalue insert
     Iterator Insert(ConstIterator pos, Type&& value) {
-        assert(pos < cend() && pos >= cbegin());
+        assert(pos - cbegin() <= cend() - cbegin() && pos - cbegin() >= 0);
         if (size_ < capacity_) {
             Iterator npos = Iterator(pos);
             std::move_backward(Iterator(pos), end(), end() + 1);
@@ -340,15 +338,13 @@ public:
 
     // "Удаляет" последний элемент вектора. Вектор не должен быть пустым
     void PopBack() noexcept {
-        assert(IsEmpty());
-        if (!IsEmpty()) {
-            --size_;
-        }
+        assert(!IsEmpty());
+        --size_;
     }
 
     // Удаляет элемент вектора в указанной позиции
     Iterator Erase(ConstIterator pos) {
-        assert(pos < cend() && pos >= cbegin());
+        assert(pos - cbegin() < cend() - cbegin() && pos - cbegin() >= 0);
         Iterator npos = Iterator(pos);
         Iterator next = Iterator(pos + 1);
         std::move(next, end(), npos);
